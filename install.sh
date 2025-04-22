@@ -32,11 +32,11 @@ sudo apt update && sudo apt install -y \
   age zstd mergerfs
 
 ## =====================
-## 2. 암호화 디스크 병합 (1TB x2 → mergerfs)
+## 2. LUKS 디스크 2개 병합 마운트 (1TB x 2)
 ## =====================
-sudo mkdir -p /mnt/securehdd1 /mnt/securehdd2
+sudo mkdir -p /mnt/securehdd1 /mnt/securehdd2 /mnt/securehdd
 sudo cryptsetup luksOpen /dev/sdb secure1
-sudo cryptsetup luksOpen /dev/sdc secure2
+sudo cryptsetup luksOpen /dev/sda secure2
 sudo mount /dev/mapper/secure1 /mnt/securehdd1
 sudo mount /dev/mapper/secure2 /mnt/securehdd2
 sudo mergerfs /mnt/securehdd1:/mnt/securehdd2 /mnt/securehdd
