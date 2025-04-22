@@ -27,7 +27,8 @@ sudo apt update && sudo apt install -y \
   ufw \
   rdfind \
   qrencode \
-  dnscrypt-proxy
+  dnscrypt-proxy \
+  age zstd
 
 ## =====================
 ## 2. 암호화 디스크 병합 (1TB x2 → mergerfs)
@@ -52,7 +53,8 @@ for u in "${USERS[@]}"; do
   mkdir -p "$USER_ROOT/$u/archives"
   mkdir -p "$USER_ROOT/$u/e2ee"
   touch "$USER_ROOT/$u/.sort_enabled"
-  setquota -u $u 204800 204800 0 0 -a
+  useradd -m "$u" || true
+  echo "$u:$PASSWORD" | chpasswd
 done
 
 ## =====================
@@ -106,7 +108,6 @@ ListenPort = $WG_PORT
 PostUp = ufw allow $WG_PORT/udp
 PostUp = iptables -A FORWARD -i %i -j ACCEPT
 PostDown = iptables -D FORWARD -i %i -j ACCEPT
-
 EOL
 
 mkdir -p /etc/wireguard/clients
@@ -128,16 +129,22 @@ AllowedIPs = 0.0.0.0/0
 PersistentKeepalive = 25
 EOF
   qrencode -o /etc/wireguard/clients/$u.png < /etc/wireguard/clients/$u.conf
+  chown $u:$u /etc/wireguard/clients/$u.* || true
+  chmod 600 /etc/wireguard/clients/$u.conf
+  chmod 644 /etc/wireguard/clients/$u.png
+  echo "✅ WireGuard 프로파일 생성 완료: $u"
 done
 
 ## =====================
 ## 6. DNSCrypt-Proxy 설정
 ## =====================
-mv /etc/dnscrypt-proxy /etc/dnscrypt-proxy.bak || true
-git clone https://github.com/DNSCrypt/dnscrypt-proxy.git /etc/dnscrypt-proxy
-cp /etc/dnscrypt-proxy/dnscrypt-proxy/example-dnscrypt-proxy.toml /etc/dnscrypt-proxy/dnscrypt-proxy.toml
+rm -rf /etc/dnscrypt-proxy.bak /etc/dnscrypt-proxy
+mkdir -p /etc/dnscrypt-proxy
+curl -L https://github.com/DNSCrypt/dnscrypt-proxy/releases/latest/download/dnscrypt-proxy-linux_x86_64.tar.gz | tar xz --strip-components=1 -C /etc/dnscrypt-proxy
+cp /etc/dnscrypt-proxy/example-dnscrypt-proxy.toml /etc/dnscrypt-proxy/dnscrypt-proxy.toml
 sed -i 's/^# server_names =.*/server_names = ["cloudflare", "quad9-dnscrypt-ip4-filter-pri"]/' /etc/dnscrypt-proxy/dnscrypt-proxy.toml
-systemctl restart dnscrypt-proxy
+/etc/dnscrypt-proxy/dnscrypt-proxy -service install
+systemctl enable dnscrypt-proxy && systemctl restart dnscrypt-proxy
 
 ## =====================
 ## 7. 프락시 자동 트리거 스크립트 등록 (wg1 자동 ON/OFF)
@@ -187,10 +194,11 @@ chmod +x /usr/local/bin/wg-check
 ## =====================
 ## 완료 메시지
 ## =====================
-echo "\n[✅ NAS 설치 완료]"
+echo -e "\n[✅ NAS 설치 완료]"
 echo "- 웹: https://$PUBLIC_IP"
 echo "- VPN QR코드: /etc/wireguard/clients/*.png"
-echo "- 정리 및 중복 제거는 사용자별 폴더에 설정됨"
-echo "- 자동 프락시 연동 완료 (VPN 접속 시 wg1 자동 작동)"
-echo "- 디버그 로그: /var/log/nas-install.log"
-echo "- 상태 확인: 'wg-check' 명령어로 확인 가능"
+echo "- 사용자별 폴더 및 자동 정리 스위치 생성 완료"
+echo "- 자동 프락시 트리거 + 수동 토글 'proxy' 명령 등록"
+echo "- DNS 보안 설정 (dnscrypt-proxy) 적용 완료"
+echo "- VPN 상태 확인 명령: wg-check"
+echo "- 설치 로그: /var/log/nas-install.log"
