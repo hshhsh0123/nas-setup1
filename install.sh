@@ -39,6 +39,7 @@ for dev in $DISK1 $DISK2; do
     dmsetup remove $(basename $(lsblk -no NAME $dev | tail -1)) || true
     wipefs -a $dev || true
     echo "[+] $dev 정리 완료"
+
 done
 
 ### 디스크 강제 초기화 안내
@@ -46,10 +47,10 @@ echo "[경고] $DISK1, $DISK2의 모든 데이터가 삭제됩니다. 5초 후 �
 sleep 5
 
 ### LUKS 포맷 강제 진행
-printf 'YES\n' | cryptsetup luksFormat $DISK1 --batch-mode --type luks2 --force-password
+printf 'YES\n' | cryptsetup luksFormat $DISK1 --batch-mode --type luks2 --force-password --cipher aes-xts-plain64 --key-size 512 --iter-time 5000
 cryptsetup luksOpen $DISK1 hdd1_crypt
 
-printf 'YES\n' | cryptsetup luksFormat $DISK2 --batch-mode --type luks2 --force-password
+printf 'YES\n' | cryptsetup luksFormat $DISK2 --batch-mode --type luks2 --force-password --cipher aes-xts-plain64 --key-size 512 --iter-time 5000
 cryptsetup luksOpen $DISK2 hdd2_crypt
 
 mkfs.ext4 /dev/mapper/hdd1_crypt
@@ -78,6 +79,7 @@ for user in "${USER_LIST[@]}"; do
     echo "$user:$user" | chpasswd
     echo "$user 계정 생성됨" | tee -a /var/log/shadownas.log
     notify_discord "[NAS] 사용자 계정 생성됨: $user"
+
 done
 
 ### 관리자 계정 구성
