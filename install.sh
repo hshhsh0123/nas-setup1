@@ -34,12 +34,13 @@ for dev in $DISK1 $DISK2; do
         echo "[!] cryptsetup luksClose /dev/mapper/$mdev"
         cryptsetup luksClose /dev/mapper/$mdev || true
     done
-    umount -lf $dev || true
+    umount -lf $dev 2>/dev/null || true
     MNTS=$(lsblk -no MOUNTPOINT $dev | grep -v '^$' || true)
     for mnt in $MNTS; do
         umount -lf "$mnt" || true
     done
-    dmsetup remove $(basename $(lsblk -no NAME $dev | tail -1)) || true
+    name=$(basename $(lsblk -no NAME $dev | tail -1) 2>/dev/null || true)
+    [ -n "$name" ] && dmsetup remove "$name" || true
     wipefs -a $dev || true
     echo "[+] $dev 정리 완료"
     sleep 1
