@@ -25,25 +25,19 @@ function notify_discord() {
 ### 패키지 설치
 apt update && apt install -y samba wireguard cryptsetup glances htop curl jq mergerfs quota smartmontools rkhunter fail2ban nginx mariadb-server php php-fpm php-mysql php-zip php-gd php-xml php-curl php-mbstring unzip
 
-### 디스크 사용 중인지 확인 후 강제 해제
+### 디스크 강제 정리 루틴
 for dev in $DISK1 $DISK2; do
     echo "[!] $dev 사용 중 프로세스 종료 시도 중..."
     fuser -km $dev || true
-    sleep 2
-
+    sleep 1
     for mdev in $(ls /dev/mapper | grep hdd); do
         echo "[!] cryptsetup luksClose /dev/mapper/$mdev"
         cryptsetup luksClose /dev/mapper/$mdev || true
     done
-
     umount -lf $dev || true
     umount -lf $(lsblk -no MOUNTPOINT $dev | grep -v '^$') || true
-    sleep 1
-
-    echo "[+] $dev 정리 중 (wipefs)"
-    wipefs -a $dev || {
-        echo "[!] $dev: wipefs 실패. 강제 종료 중단 필요. 사용 중인지 확인 요망."
-    }
+    dmsetup remove $(basename $(lsblk -no NAME $dev | tail -1)) || true
+    wipefs -a $dev || true
     echo "[+] $dev 정리 완료"
 done
 
