@@ -27,37 +27,27 @@ apt update && apt install -y samba wireguard cryptsetup glances htop curl jq mer
 
 ### 디스크 사용 중인지 확인 후 강제 해제
 for dev in $DISK1 $DISK2; do
-    if lsof | grep -q $dev; then
-        echo "[!] $dev 사용 중인 프로세스 강제 종료 시도 중..."
-        fuser -km $dev || true
-        sleep 2
-    fi
-done
-
-for mapper in /dev/mapper/hdd1_crypt /dev/mapper/hdd2_crypt; do
-    if lsof | grep -q $mapper; then
-        echo "[!] $mapper 사용 중인 프로세스 강제 종료 시도 중..."
-        fuser -km $mapper || true
-        sleep 2
-    fi
-    umount -l $mapper || true
-    cryptsetup luksClose $(basename $mapper) || true
+    echo "[!] $dev 사용 중 프로세스 종료 시도 중..."
+    fuser -km $dev || true
+    sleep 2
+    umount -lf $dev || true
+    cryptsetup luksClose $(basename $dev)_crypt || true
+    sleep 1
+    wipefs -a $dev || true
+    sleep 1
+    echo "[+] $dev 정리 완료"
 done
 
 ### 디스크 강제 초기화 안내
 echo "[경고] $DISK1, $DISK2의 모든 데이터가 삭제됩니다. 5초 후 진행합니다. Ctrl+C로 중단 가능."
 sleep 5
 
-### 기존 LUKS 흔적 제거
-wipefs -a $DISK1 || true
-wipefs -a $DISK2 || true
-
 ### LUKS 포맷 강제 진행
-printf 'YES\n' | cryptsetup luksFormat $DISK1 --batch-mode --type luks2 --force-password || true
-cryptsetup luksOpen $DISK1 hdd1_crypt || true
+printf 'YES\n' | cryptsetup luksFormat $DISK1 --batch-mode --type luks2 --force-password
+cryptsetup luksOpen $DISK1 hdd1_crypt
 
-printf 'YES\n' | cryptsetup luksFormat $DISK2 --batch-mode --type luks2 --force-password || true
-cryptsetup luksOpen $DISK2 hdd2_crypt || true
+printf 'YES\n' | cryptsetup luksFormat $DISK2 --batch-mode --type luks2 --force-password
+cryptsetup luksOpen $DISK2 hdd2_crypt
 
 mkfs.ext4 /dev/mapper/hdd1_crypt
 mkfs.ext4 /dev/mapper/hdd2_crypt
