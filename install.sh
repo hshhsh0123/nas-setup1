@@ -30,11 +30,20 @@ for dev in $DISK1 $DISK2; do
     echo "[!] $dev 사용 중 프로세스 종료 시도 중..."
     fuser -km $dev || true
     sleep 2
+
+    for mdev in $(ls /dev/mapper | grep hdd); do
+        echo "[!] cryptsetup luksClose /dev/mapper/$mdev"
+        cryptsetup luksClose /dev/mapper/$mdev || true
+    done
+
     umount -lf $dev || true
-    cryptsetup luksClose $(basename $dev)_crypt || true
+    umount -lf $(lsblk -no MOUNTPOINT $dev | grep -v '^$') || true
     sleep 1
-    wipefs -a $dev || true
-    sleep 1
+
+    echo "[+] $dev 정리 중 (wipefs)"
+    wipefs -a $dev || {
+        echo "[!] $dev: wipefs 실패. 강제 종료 중단 필요. 사용 중인지 확인 요망."
+    }
     echo "[+] $dev 정리 완료"
 done
 
