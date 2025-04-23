@@ -25,17 +25,19 @@ function notify_discord() {
 ### 패키지 설치
 apt update && apt install -y samba wireguard cryptsetup glances htop curl jq mergerfs quota smartmontools rkhunter fail2ban nginx mariadb-server php php-fpm php-mysql php-zip php-gd php-xml php-curl php-mbstring unzip
 
-### 디스크 사용 중인지 확인 후 강제 해제
-umount $DISK1 || true
+### 디스크 사용 중인지 확인 후 강제 해제umount $DISK1 || true
 umount $DISK2 || true
+
+### 디스크 강제 해제 (디바이스 점유 문제 해결)
+cryptsetup luksClose hdd1_crypt || true
+cryptsetup luksClose hdd2_crypt || true
 
 ### 디스크 암호화 및 마운트 (2개 디스크 병합)
 echo "[경고] $DISK1, $DISK2의 모든 데이터가 삭제됩니다. 5초 후 진행합니다. Ctrl+C로 중단 가능."
 sleep 5
-
-cryptsetup luksFormat $DISK1 <<< "YES"
-cryptsetup luksFormat $DISK2 <<< "YES"
+echo "YES" | cryptsetup luksFormat $DISK1
 cryptsetup luksOpen $DISK1 hdd1_crypt
+echo "YES" | cryptsetup luksFormat $DISK2
 cryptsetup luksOpen $DISK2 hdd2_crypt
 mkfs.ext4 /dev/mapper/hdd1_crypt
 mkfs.ext4 /dev/mapper/hdd2_crypt
