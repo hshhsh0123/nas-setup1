@@ -35,10 +35,14 @@ for dev in $DISK1 $DISK2; do
         cryptsetup luksClose /dev/mapper/$mdev || true
     done
     umount -lf $dev || true
-    umount -lf $(lsblk -no MOUNTPOINT $dev | grep -v '^$') || true
+    MNTS=$(lsblk -no MOUNTPOINT $dev | grep -v '^$' || true)
+    for mnt in $MNTS; do
+        umount -lf "$mnt" || true
+    done
     dmsetup remove $(basename $(lsblk -no NAME $dev | tail -1)) || true
     wipefs -a $dev || true
     echo "[+] $dev 정리 완료"
+    sleep 1
 done
 
 ### 디스크 강제 초기화 안내
@@ -62,7 +66,7 @@ mkdir -p $MOUNT_PATH/hdd1 $MOUNT_PATH/hdd2
 mount /dev/mapper/hdd1_crypt $MOUNT_PATH/hdd1
 mount /dev/mapper/hdd2_crypt $MOUNT_PATH/hdd2
 mkdir -p $MERGE_PATH
-mergerfs "$MOUNT_PATH/hdd1:$MOUNT_PATH/hdd2" $MERGE_PATH
+mergerfs -o nonempty "$MOUNT_PATH/hdd1:$MOUNT_PATH/hdd2" $MERGE_PATH
 
 ### 쿼터 설정 준비
 quotaoff $MOUNT_PATH/hdd1 || true
