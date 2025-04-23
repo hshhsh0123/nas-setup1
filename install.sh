@@ -37,15 +37,17 @@ cryptsetup luksClose hdd2_crypt || true
 echo "[경고] $DISK1, $DISK2의 모든 데이터가 삭제됩니다. 5초 후 진행합니다. Ctrl+C로 중단 가능."
 sleep 5
 
-### 장치 점유 문제 회피를 위한 디바이스 강제 열기
-cryptsetup luksKillSlot $DISK1 0 || true
-cryptsetup luksKillSlot $DISK2 0 || true
+### LUKS 초기화: 기존 암호화 흔적 제거 및 강제 포맷
+wipefs -a $DISK1 || true
+wipefs -a $DISK2 || true
 
 ### 디스크 암호화 진행
-echo "YES" | cryptsetup luksFormat $DISK1
+echo -n "YES" | cryptsetup luksFormat $DISK1 --batch-mode --type luks2
 cryptsetup luksOpen $DISK1 hdd1_crypt
-echo "YES" | cryptsetup luksFormat $DISK2
+
+echo -n "YES" | cryptsetup luksFormat $DISK2 --batch-mode --type luks2
 cryptsetup luksOpen $DISK2 hdd2_crypt
+
 mkfs.ext4 /dev/mapper/hdd1_crypt
 mkfs.ext4 /dev/mapper/hdd2_crypt
 mkdir -p $MOUNT_PATH/hdd1 $MOUNT_PATH/hdd2
