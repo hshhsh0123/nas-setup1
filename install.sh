@@ -46,12 +46,16 @@ done
 echo "[경고] $DISK1, $DISK2의 모든 데이터가 삭제됩니다. 5초 후 진행합니다. Ctrl+C로 중단 가능."
 sleep 5
 
-### LUKS 포맷 강제 진행 (비밀번호 없이 무조건 진행)
-cryptsetup luksFormat $DISK1 --batch-mode --type luks2 --cipher aes-xts-plain64 --key-size 512 --iter-time 5000 --force-password <<< "$ADMIN_PASS"
-cryptsetup luksOpen $DISK1 hdd1_crypt <<< "$ADMIN_PASS"
+### LUKS 포맷 강제 진행 (비밀번호 자동 입력)
+echo "초기화중..."
+echo "$ADMIN_PASS" | cryptsetup luksFormat $DISK1 --batch-mode --type luks2 --cipher aes-xts-plain64 --key-size 512 --iter-time 5000 --force-password --key-file=-
+echo "$ADMIN_PASS" | cryptsetup luksOpen $DISK1 hdd1_crypt --key-file=-
+echo "초기화 성공"
 
-cryptsetup luksFormat $DISK2 --batch-mode --type luks2 --cipher aes-xts-plain64 --key-size 512 --iter-time 5000 --force-password <<< "$ADMIN_PASS"
-cryptsetup luksOpen $DISK2 hdd2_crypt <<< "$ADMIN_PASS"
+echo "초기화중.."
+echo "$ADMIN_PASS" | cryptsetup luksFormat $DISK2 --batch-mode --type luks2 --cipher aes-xts-plain64 --key-size 512 --iter-time 5000 --force-password --key-file=-
+echo "$ADMIN_PASS" | cryptsetup luksOpen $DISK2 hdd2_crypt --key-file=-
+echo "초기화 성공"
 
 mkfs.ext4 /dev/mapper/hdd1_crypt
 mkfs.ext4 /dev/mapper/hdd2_crypt
