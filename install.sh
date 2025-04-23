@@ -45,6 +45,20 @@ for dev in $DISK1 $DISK2; do
     wipefs -a $dev || true
     echo "[+] $dev 정리 완료"
     sleep 1
+    udevadm settle
+    sleep 1
+    echo 1 > /sys/block/$(basename $dev)/device/delete || true
+    udevadm settle
+    sleep 1
+    partprobe || true
+    sleep 1
+    udevadm settle
+    sleep 1
+    echo 1 > /sys/block/$(basename $dev)/device/rescan || true
+    udevadm settle
+    sleep 1
+    lsblk
+    echo "[+] $dev 재인식 완료"
 done
 
 ### 디스크 강제 초기화 안내
