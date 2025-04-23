@@ -26,6 +26,8 @@ function notify_discord() {
 apt update && apt install -y samba wireguard cryptsetup glances htop curl jq mergerfs quota smartmontools rkhunter fail2ban nginx mariadb-server php php-fpm php-mysql php-zip php-gd php-xml php-curl php-mbstring unzip
 
 ### 디스크 강제 정리 루틴
+dmsetup remove_all || true
+udevadm settle
 for dev in $DISK1 $DISK2; do
     echo "[!] $dev 사용 중 프로세스 종료 시도 중..."
     fuser -km $dev || true
