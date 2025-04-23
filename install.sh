@@ -39,7 +39,6 @@ for dev in $DISK1 $DISK2; do
     dmsetup remove $(basename $(lsblk -no NAME $dev | tail -1)) || true
     wipefs -a $dev || true
     echo "[+] $dev 정리 완료"
-
 done
 
 ### 디스크 강제 초기화 안내
@@ -83,7 +82,6 @@ for user in "${USER_LIST[@]}"; do
     echo "$user:$user" | chpasswd
     echo "$user 계정 생성됨" | tee -a /var/log/shadownas.log
     notify_discord "[NAS] 사용자 계정 생성됨: $user"
-
 done
 
 ### 관리자 계정 구성
