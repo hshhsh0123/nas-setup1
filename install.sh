@@ -1,6 +1,7 @@
 #!/bin/bash
-# === ShadowNAS: Full Auto Installer ===
-# By ChatGPT for hshhsh0123 (with E2EE, VPN, dedup, auto-sort, DNS privacy, debugging, external access)
+# ShadowNAS Full Installer Script (with Nextcloud + Discord + Security)
+# Author: GPT Assistant
+# Description: NAS 자동 설치 (E2EE, 사용자 폴더, VPN, Samba, Discord 알림, 보안 감시, Nextcloud 포함)
 
 set -e
 
@@ -37,13 +38,21 @@ mount /dev/mapper/hdd2_crypt $MOUNT_PATH/hdd2
 mkdir -p $MERGE_PATH
 mergerfs "$MOUNT_PATH/hdd1:$MOUNT_PATH/hdd2" $MERGE_PATH
 
+### 쿼터 설정 준비
+quotaoff $MOUNT_PATH/hdd1 || true
+quotaoff $MOUNT_PATH/hdd2 || true
+quotacheck -cumf $MOUNT_PATH/hdd1
+quotacheck -cumf $MOUNT_PATH/hdd2
+quotaon $MOUNT_PATH/hdd1
+quotaon $MOUNT_PATH/hdd2
+
 ### 사용자 폴더 구성
 mkdir -p $MERGE_PATH/{shared,users}
 for user in "${USER_LIST[@]}"; do
     useradd -m $user
     mkdir -p $MERGE_PATH/users/$user
     chown $user:$user $MERGE_PATH/users/$user
-    setquota -u $user 209715200 209715200 0 0 -a /dev/mapper/hdd1_crypt
+    setquota -u $user 209715200 209715200 0 0 $MOUNT_PATH/hdd1
     echo "$user:$user" | chpasswd
     echo "$user 계정 생성됨" | tee -a /var/log/shadownas.log
     notify_discord "[NAS] 사용자 계정 생성됨: $user"
@@ -95,8 +104,8 @@ notify_discord "[NAS] Fail2Ban 활성화 완료"
 
 ### 상태 모니터링 크론잡 설정
 cat > /etc/cron.d/shadownas_monitor <<EOF
-* * * * * root echo "[$(date)] Disk 사용량: $(df -h $MERGE_PATH | tail -1)" >> /var/log/shadownas.log
-* * * * * root grep -E "Failed|error" /var/log/auth.log | tail -n 5 | while read line; do curl -s -H "Content-Type: application/json" -X POST -d "{\"content\": \"[NAS 보안 경고] $line\"}" $DISCORD_WEBHOOK; done
+* * * * * root echo "[\$(date)] Disk 사용량: \$(df -h $MERGE_PATH | tail -1)" >> /var/log/shadownas.log
+* * * * * root grep -E "Failed|error" /var/log/auth.log | tail -n 5 | while read line; do curl -s -H "Content-Type: application/json" -X POST -d "{\"content\": \"[NAS 보안 경고] \$line\"}" $DISCORD_WEBHOOK; done
 EOF
 notify_discord "[NAS] 상태 모니터링 및 보안 경고 등록 완료"
 
