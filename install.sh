@@ -28,25 +28,23 @@ apt update && apt install -y samba wireguard cryptsetup glances htop curl jq mer
 ### 디스크 사용 중인지 확인 후 강제 해제
 umount $DISK1 || true
 umount $DISK2 || true
-
-### 디스크 강제 해제 (디바이스 점유 문제 해결)
 cryptsetup luksClose hdd1_crypt || true
 cryptsetup luksClose hdd2_crypt || true
 
-### 디스크 암호화 및 마운트 (2개 디스크 병합)
+### 디스크 강제 초기화 안내
 echo "[경고] $DISK1, $DISK2의 모든 데이터가 삭제됩니다. 5초 후 진행합니다. Ctrl+C로 중단 가능."
 sleep 5
 
-### LUKS 초기화: 기존 암호화 흔적 제거 및 강제 포맷
+### 기존 LUKS 흔적 제거
 wipefs -a $DISK1 || true
 wipefs -a $DISK2 || true
 
-### 디스크 암호화 진행
-echo -n "YES" | cryptsetup luksFormat $DISK1 --batch-mode --type luks2
-cryptsetup luksOpen $DISK1 hdd1_crypt
+### LUKS 포맷 강제 진행
+printf 'YES\n' | cryptsetup luksFormat $DISK1 --batch-mode --type luks2 --force-password || true
+cryptsetup luksOpen $DISK1 hdd1_crypt || true
 
-echo -n "YES" | cryptsetup luksFormat $DISK2 --batch-mode --type luks2
-cryptsetup luksOpen $DISK2 hdd2_crypt
+printf 'YES\n' | cryptsetup luksFormat $DISK2 --batch-mode --type luks2 --force-password || true
+cryptsetup luksOpen $DISK2 hdd2_crypt || true
 
 mkfs.ext4 /dev/mapper/hdd1_crypt
 mkfs.ext4 /dev/mapper/hdd2_crypt
@@ -67,7 +65,7 @@ quotaon $MOUNT_PATH/hdd2
 ### 사용자 폴더 구성
 mkdir -p $MERGE_PATH/{shared,users}
 for user in "${USER_LIST[@]}"; do
-    useradd -m $user
+    useradd -m $user || true
     mkdir -p $MERGE_PATH/users/$user
     chown $user:$user $MERGE_PATH/users/$user
     setquota -u $user 209715200 209715200 0 0 $MOUNT_PATH/hdd1
@@ -77,7 +75,7 @@ for user in "${USER_LIST[@]}"; do
 done
 
 ### 관리자 계정 구성
-useradd -m admin -G sudo
+useradd -m admin -G sudo || true
 echo "admin:$ADMIN_PASS" | chpasswd
 notify_discord "[NAS] 관리자 계정 생성 완료"
 
